@@ -189,6 +189,8 @@ The automation routine must be embedded inside **`Grbl_Esp32/src/Protocol.cpp`**
 
 You do **NOT** need to add `#include "SDCard.h"` at the top, because it is already inherited automatically via `#include "Grbl.h"`. 
 
+Line 155
+
 Open `Protocol.cpp`, scroll down to the **`protocol_main_loop()`** function, locate the beginning of the infinite **`for (;;)`** cycle, and paste this block right after the opening bracket:
 
 ```cpp
