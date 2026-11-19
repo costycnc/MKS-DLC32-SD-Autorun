@@ -5,7 +5,7 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-24.04 
+    runs-on: ubuntu-24.04   # Bloccato su 24.04 per avere Python 3.9 disponibile
 
     steps:
     - name: Checkout Code
@@ -22,7 +22,6 @@ jobs:
         pip install --upgrade platformio
 
     - name: Run PlatformIO Build
-      # Si sposta nella cartella Firmware dove risiede il file platformio.ini
       working-directory: Firmware
       run: pio run
 
@@ -30,25 +29,46 @@ jobs:
       run: pip install esptool
 
     - name: Merge Full 8MB Firmware
-      # Eseguiamo il merge dentro la cartella Firmware dove PlatformIO ha generato i file
       working-directory: Firmware
       run: |
-        # Trova la cartella di build (es. .pio/build/esp32dev)
+        # Trova la cartella di build (es. .pio/build/mks_dlc32_v2_1)
         BUILD_DIR=$(find .pio/build -maxdepth 1 -type d | tail -n 1)
         echo "Uso la directory di build: $BUILD_DIR"
-        
-        # Esegui il merge dei 3 file in uno da 8MB
-        esptool.py --chip esp32 merge_bin \
+
+        # Cerca il bootloader: prima nella cartella di build, poi nel framework di PlatformIO
+        BOOTLOADER=$(find "$BUILD_DIR" -name "bootloader*.bin" | head -n 1)
+        if [ -z "$BOOTLOADER" ]; then
+          echo "Bootloader non trovato nella build, cerco nel framework..."
+          BOOTLOADER=$(find ~/.platformio/packages -name "bootloader_dio_40m.bin" | head -n 1)
+        fi
+        if [ -z "$BOOTLOADER" ]; then
+          echo "ERRORE: Bootloader non trovato!"
+          exit 1
+        fi
+        echo "Bootloader trovato: $BOOTLOADER"
+
+        # Cerca partitions.bin
+        PARTITIONS="$BUILD_DIR/partitions.bin"
+        if [ ! -f "$PARTITIONS" ]; then
+          echo "Partitions non trovato nella build, cerco nel framework..."
+          PARTITIONS=$(find ~/.platformio/packages -name "partitions.bin" | head -n 1)
+        fi
+        echo "Partitions trovato: $PARTITIONS"
+
+        # Il firmware è sicuramente nella cartella di build
+        FIRMWARE="$BUILD_DIR/firmware.bin"
+        echo "Firmware trovato: $FIRMWARE"
+
+        # Esegui il merge: 0x1000 bootloader, 0x8000 partizioni, 0x10000 firmware
+        esptool --chip esp32 merge_bin \
           -o firmware_full_8mb.bin \
           --flash_mode dio --flash_freq 40m --flash_size 8MB \
-          --fill-flash-size 8MB \
-          0x1000 $BUILD_DIR/bootloader.bin \
-          0x8000 $BUILD_DIR/partitions.bin \
-          0x10000 $BUILD_DIR/firmware.bin
+          0x1000 "$BOOTLOADER" \
+          0x8000 "$PARTITIONS" \
+          0x10000 "$FIRMWARE"
 
     - name: Upload Firmware Binary
       uses: actions/upload-artifact@v4
       with:
         name: MKS-DLC32-Firmware-Full
-        # Carica il file appena creato
         path: Firmware/firmware_full_8mb.bin
