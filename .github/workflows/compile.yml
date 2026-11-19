@@ -5,7 +5,7 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04   # Bloccato su 24.04 per avere Python 3.9 disponibile
 
     steps:
     - name: Checkout Code
