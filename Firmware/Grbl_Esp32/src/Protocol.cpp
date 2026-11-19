@@ -153,7 +153,7 @@ void protocol_main_loop() {
  int c;
 bool is_need_next = false;
 for (;;) {
-
+/*
 // --- INIZIO AVVIO AUTOMATICO DA INSERIMENTO SD CON VERIFICA FILE ---
     static bool file_already_started = true;
     static uint32_t last_sd_check_time = 0;
@@ -221,7 +221,7 @@ for (;;) {
 
     }
     // --- FINE AVVIO AUTOMATICO DA INSERIMENTO SD CON VERIFICA FILE ---
-
+*/
 #if 1
 #ifdef ENABLE_SD_CARD
         if (SD_ready_next) {
