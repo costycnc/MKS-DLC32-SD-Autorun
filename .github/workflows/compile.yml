@@ -26,8 +26,29 @@ jobs:
       working-directory: Firmware
       run: pio run
 
+    - name: Install esptool
+      run: pip install esptool
+
+    - name: Merge Full 8MB Firmware
+      # Eseguiamo il merge dentro la cartella Firmware dove PlatformIO ha generato i file
+      working-directory: Firmware
+      run: |
+        # Trova la cartella di build (es. .pio/build/esp32dev)
+        BUILD_DIR=$(find .pio/build -maxdepth 1 -type d | tail -n 1)
+        echo "Uso la directory di build: $BUILD_DIR"
+        
+        # Esegui il merge dei 3 file in uno da 8MB
+        esptool.py --chip esp32 merge-bin \
+          -o firmware_full_8mb.bin \
+          --flash_mode dio --flash_freq 40m --flash_size 8MB \
+          --fill-flash-size 8MB \
+          0x1000 $BUILD_DIR/bootloader.bin \
+          0x8000 $BUILD_DIR/partitions.bin \
+          0x10000 $BUILD_DIR/firmware.bin
+
     - name: Upload Firmware Binary
       uses: actions/upload-artifact@v4
       with:
-        name: MKS-DLC32-Firmware
-        path: Firmware/.pio/build/**/firmware.bin
+        name: MKS-DLC32-Firmware-Full
+        # Carica il file appena creato
+        path: Firmware/firmware_full_8mb.bin
